@@ -26,6 +26,7 @@ import argparse
 import csv
 import requests
 import os
+import sys
 import shutil
 import patch
 
@@ -70,7 +71,9 @@ if __name__ == '__main__':
     with open('oracle.csv', newline='') as oracle:
         oracle_reader = csv.DictReader(oracle, delimiter=',', quotechar='"')
         previous_link = None
+        row = 0
         for commit in oracle_reader:
+            row += 1
             link = f"{commit['url']}/commits/{commit['sha']}"
             # For commits with more files, make only one request for the commit,
             # to reduce calls to GitHub API to a minimum, to avoid reaching the rate limit
@@ -78,7 +81,12 @@ if __name__ == '__main__':
             if previous_link != link:
                 commit_json = requests.get(link, headers=requestHeaders).json()
                 previous_link = link
-            for file_json in commit_json['files']:
-                if file_json['filename'] == commit['filepath']:
-                    process_file()
-                    break
+            if 'message' in commit_json and commit_json['message'] == "Not Found":
+                print(f"ERROR: Commit, from row {row} in oracle.csv, not found.",
+                      file=sys.stderr)
+            else:
+                for file_json in commit_json['files']:
+                    if file_json['filename'] == commit['filepath']:
+                        process_file()
+                        print(f"Row {row} of oracle.csv processed.")
+                        break
