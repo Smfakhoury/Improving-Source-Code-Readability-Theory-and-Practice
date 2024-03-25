@@ -69,11 +69,16 @@ if __name__ == '__main__':
                       "Authorization": f"Bearer {args.github_api_token}"}
     with open('oracle.csv', newline='') as oracle:
         oracle_reader = csv.DictReader(oracle, delimiter=',', quotechar='"')
+        previous_link = None
         for commit in oracle_reader:
             link = f"{commit['url']}/commits/{commit['sha']}"
-            commit_json = requests.get(link, headers=requestHeaders).json()
+            # For commits with more files, make only one request for the commit,
+            # to reduce calls to GitHub API to a minimum, to avoid reaching the rate limit
+            # of 5000 requests per hour for authenticated users.
+            if previous_link != link:
+                commit_json = requests.get(link, headers=requestHeaders).json()
+                previous_link = link
             for file_json in commit_json['files']:
                 if file_json['filename'] == commit['filepath']:
                     process_file()
                     break
-            break
