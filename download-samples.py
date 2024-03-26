@@ -69,9 +69,11 @@ if __name__ == '__main__':
     requestHeaders = {"X-GitHub-Api-Version": "2022-11-28",
                       "Authorization": f"Bearer {args.github_api_token}"}
     with open('oracle.csv', newline='') as oracle:
-        oracle_reader = csv.DictReader(oracle, delimiter=',', quotechar='"')
-        previous_link = None
         row = 0
+        oracle_reader = csv.DictReader(oracle, delimiter=',', quotechar='"')
+        row += 1
+        print(f"Row {row} (header) of oracle.csv processed.")
+        previous_link = None
         for commit in oracle_reader:
             row += 1
             link = f"{commit['url']}/commits/{commit['sha']}"
