@@ -21,8 +21,8 @@
 ### download-samples.py
 
 A python script for downloading the before and after version of the files from the commits
-into the source-file-samples directory.
-It reads the metadata of the commits and files from the oracle.csv.
+into the `source-file-samples` directory.
+It reads the metadata of the commits and files from the `oracle.csv`.
 
 #### Dependencies
 
@@ -44,3 +44,35 @@ Then call the script with the token as parameter, like this:
 ```
 
 The download takes about 30 minutes.
+
+#### Known issues
+
+##### Commit not found
+
+Some commits are not available anymore.
+Actual known (in March 2024):
+
+| Reason                                                                                 | Affected rows |
+|----------------------------------------------------------------------------------------|---------------|
+| [Repository](https://github.com/Dexels/dexels.repository) is not available anymore.    | 410 to 456    |
+| [Repository](https://github.com/eclipse/eclipse.platform.ui) is not available anymore. | 1850 to 1866  |
+| [Repository](https://github.com/eclipse/jgit) is not available anymore.                | 1877 to 1880  |
+
+Affected rows produce appropriated message on `stderr` like this:
+
+```
+ERROR: Commit, from row 410 in oracle.csv, not found.
+```
+
+##### Renamed files
+
+In the `oracle.csv` are also files listed, which were renamed in the corresponding commit.
+So there are no content changes, so nothing to evaluate in matter of readability.
+
+Affected rows produce appropriated message on `stdout` like this:
+
+```
+Row 391 of oracle.csv skipped, because the file was only renamed.
+```
+
+
