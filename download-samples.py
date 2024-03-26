@@ -23,6 +23,8 @@
 # THE SOFTWARE.
 
 import argparse
+import datetime
+import timeit
 import csv
 import requests
 import os
@@ -99,6 +101,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     requestHeaders = {"X-GitHub-Api-Version": "2022-11-28",
                       "Authorization": f"Bearer {args.github_api_token}"}
+    start = timeit.default_timer()
     with open('oracle.csv', newline='') as oracle:
         row = 0
         oracle_reader = csv.DictReader(oracle, delimiter=',', quotechar='"')
@@ -124,3 +127,5 @@ if __name__ == '__main__':
                         process_file()
                         break
                 page += 1
+    end = timeit.default_timer()
+    print(f"Duration: {datetime.timedelta(seconds=end - start)}")
