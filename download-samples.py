@@ -58,6 +58,33 @@ def process_file():
     file_patch.revert(root=before_path)
 
 
+def get_next_commit_page() -> bool:
+    # Use pagination, because with to many files it does not work without it.
+    # At about 120 files they are still listed in the json, but the patch is missing.
+
+    # Use 100 files per page -- maximum as mentioned in the documentation:
+    # https://docs.github.com/en/rest/commits/commits?apiVersion=2022-11-28#get-a-commit
+    files_per_page = 100
+    if page > 0 and len(commit_json[page - 1]['files']) < files_per_page:
+        # The previous page was not a full page. So there was not enough files in the commit
+        # left to list there. This implies it was the last page of the commit.
+        print(f"ERROR: File, from row {row} in oracle.csv, could not be found in the commit.",
+              file=sys.stderr)
+        return False
+    else:
+        if page >= len(commit_json):
+            commit_json.append(requests.get(link, headers=requestHeaders,
+                                            params={"page": page, "per_page": files_per_page})
+                               .json())
+        if 'message' in commit_json[page] and commit_json[page]['message'] == "Not Found":
+            print(f"ERROR: Commit, from row {row} in oracle.csv, not found.",
+                  file=sys.stderr)
+            return False
+        else:
+            # When there are no files anymore, the last page was already processed.
+            return len(commit_json[page]['files']) > 0
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("github_api_token", type=str,
@@ -74,6 +101,7 @@ if __name__ == '__main__':
         row += 1
         print(f"Row {row} (header) of oracle.csv processed.")
         previous_link = None
+        commit_json: list = []
         for commit in oracle_reader:
             row += 1
             link = f"{commit['url']}/commits/{commit['sha']}"
@@ -81,14 +109,15 @@ if __name__ == '__main__':
             # to reduce calls to GitHub API to a minimum, to avoid reaching the rate limit
             # of 5000 requests per hour for authenticated users.
             if previous_link != link:
-                commit_json = requests.get(link, headers=requestHeaders).json()
+                commit_json.clear()
                 previous_link = link
-            if 'message' in commit_json and commit_json['message'] == "Not Found":
-                print(f"ERROR: Commit, from row {row} in oracle.csv, not found.",
-                      file=sys.stderr)
-            else:
-                for file_json in commit_json['files']:
-                    if file_json['filename'] == commit['filepath']:
+            page = 0
+            found = False
+            while not found and get_next_commit_page():
+                for file_json in commit_json[page]['files']:
+                    found = file_json['filename'] == commit['filepath']
+                    if found:
                         process_file()
                         print(f"Row {row} of oracle.csv processed.")
                         break
+                page += 1
