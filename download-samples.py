@@ -39,23 +39,27 @@ def get_project_name() -> str:
 
 
 def process_file():
-    # Download files to the same directory as they are mentioned in the other csv files.
-    # For example in column 'after_path' in the change-distiller.csv
-    base_path = Path(os.path.join("source-file-samples", get_project_name(), commit['sha'], commit['filename']))
-    base_path.mkdir(parents=True, exist_ok=True)
+    if file_json['status'] == "renamed":
+        print(f"Row {row} of oracle.csv skipped, because the file was only renamed.")
+    else:
+        # Download files to the same directory as they are mentioned in the other csv files.
+        # For example in column 'after_path' in the change-distiller.csv
+        base_path = Path(os.path.join("source-file-samples", get_project_name(), commit['sha'], commit['filename']))
+        base_path.mkdir(parents=True, exist_ok=True)
 
-    after_path = base_path.joinpath("after")
-    after_path.mkdir(exist_ok=True)
-    with open(after_path.joinpath(commit['filename']), mode="wb") as after_file:
-        link_after_file = file_json['raw_url']
-        after_file.write(requests.get(link_after_file).content)
+        after_path = base_path.joinpath("after")
+        after_path.mkdir(exist_ok=True)
+        with open(after_path.joinpath(commit['filename']), mode="wb") as after_file:
+            link_after_file = file_json['raw_url']
+            after_file.write(requests.get(link_after_file).content)
 
-    before_path = base_path.joinpath("before")
-    before_path.mkdir(exist_ok=True)
-    shutil.copy(after_path.joinpath(commit['filename']), before_path)
-    patch_str = f"--- a/{commit['filename']}\n+++ b/{commit['filename']}\n{file_json['patch']}\n"
-    file_patch = patch.fromstring(patch_str.encode())
-    file_patch.revert(root=before_path)
+        before_path = base_path.joinpath("before")
+        before_path.mkdir(exist_ok=True)
+        shutil.copy(after_path.joinpath(commit['filename']), before_path)
+        patch_str = f"--- a/{commit['filename']}\n+++ b/{commit['filename']}\n{file_json['patch']}\n"
+        file_patch = patch.fromstring(patch_str.encode())
+        file_patch.revert(root=before_path)
+        print(f"Row {row} of oracle.csv processed.")
 
 
 def get_next_commit_page() -> bool:
@@ -118,6 +122,5 @@ if __name__ == '__main__':
                     found = file_json['filename'] == commit['filepath']
                     if found:
                         process_file()
-                        print(f"Row {row} of oracle.csv processed.")
                         break
                 page += 1
