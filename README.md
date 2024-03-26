@@ -42,3 +42,5 @@ Then call the script with the token as parameter, like this:
 ```bash
 ./download-samples.py GitHub_API_Token_place_here
 ```
+
+The download takes about 30 minutes.
